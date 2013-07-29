@@ -1,0 +1,9 @@
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\SerialLib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\SerialLib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\obj\Debug\SerialLib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\obj\Debug\SerialLib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\FileLib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\FileLib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\DS1307Lib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\SerialLib\SerialLib\bin\Debug\DS1307Lib.pdb

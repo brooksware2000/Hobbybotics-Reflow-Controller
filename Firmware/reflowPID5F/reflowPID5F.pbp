@@ -1,0 +1,1660 @@
+'****************************************************************
+'*  Name    : reflowPID5F.pbp                                   *
+'*  Author  : Curtis Brooks                                     *
+'*  Notice  : Copyright (c) 2011 Hobbybotics                    *
+'*          : All Rights Reserved                               *
+'*  Date    : 01/01/2012                                        *
+'*  Version : Hardware 8.03                                     *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+
+'-------------------------------------------------------------------------------
+'  Setup for bootloader
+'-------------------------------------------------------------------------------
+DEFINE LOADER_USED 1
+
+'-------------------------------------------------------------------------------
+'  Set oscillator speed
+'-------------------------------------------------------------------------------
+DEFINE  OSC         20
+
+'-------------------------------------------------------------------------------
+'  Include files
+'-------------------------------------------------------------------------------
+INCLUDE "PIC16F877A.pbp"
+include "DT_INTS-14.bas"
+INCLUDE "ReEnterPBP.bas"
+INCLUDE "Elapsed_INT.bas"
+
+'-------------------------------------------------------------------------------
+'  I/O Definitions
+'-------------------------------------------------------------------------------
+'Set PORTA and PORTE to digital
+ADCON1 = %00000111
+
+'Turn off PORTA comparators
+CMCON = %00000111
+
+'Set PORTB to input
+TRISB=%11111111
+
+'-------------------------------------------------------------------------------
+'  Instant Interrupts Elapsed Timer routine
+'-------------------------------------------------------------------------------
+
+ASM
+INT_LIST  macro      ;IntSource,  Label,        Type, ResetFlag?
+        INT_Handler   TMR1_INT,  _ClockCount,   PBP,  yes
+    endm
+    ;Creates the interrupt processor
+    INT_CREATE            
+
+    ;Enable Timer 1 Interrupts
+    INT_ENABLE  TMR1_INT    
+ENDASM
+
+'Reset Time to  0d-00:00:00.00
+Gosub ResetTime           
+
+'-------------------------------------------------------------------------------
+'  LCD defines
+'-------------------------------------------------------------------------------
+'Define which port is connected to the LCD data pins D4 thru D7
+DEFINE    LCD_DREG        PORTD
+
+'Define starting data bit on LCD bus (0 for 8-bit or 4 for 4-bit)
+DEFINE    LCD_DBIT        4
+
+'Define LCD bus size (4-bit or 8-bit)
+DEFINE    LCD_BITS        4
+
+'Define LCD register select port (RS)
+DEFINE    LCD_RSREG       PORTD
+
+'Define LCD register select bit (RS)
+DEFINE    LCD_RSBIT       1
+
+'Define LCD read/write port (RW)
+DEFINE    LCD_RWREG       PORTD
+
+'Define LCD read/write bit (RW)
+DEFINE    LCD_RWBIT       2
+
+'Define LCD enable port (E)
+DEFINE    LCD_EREG        PORTD
+
+'Define LCD enable bit (E)
+DEFINE    LCD_EBIT        3
+
+'Define number of lines on LCD
+DEFINE    LCD_LINES       4
+
+'Define LCD command delay time
+DEFINE    LCD_COMMANDUS   2000  
+
+'Define LCD data delay time
+DEFINE    LCD_DATAUS      50
+
+'Set starting LCD CGRAM starting address location
+LCD_CGRAM con             $40
+
+'-------------------------------------------------------------------------------
+'  Setup hardware serial port for continuous receive
+'-------------------------------------------------------------------------------
+DEFINE  HSER_RCSTA   90h
+DEFINE  HSER_TXSTA   20h
+DEFINE  HSER_BAUD    9600
+
+'-------------------------------------------------------------------------------
+'  Button port pin assignments
+'-------------------------------------------------------------------------------
+'UP Arrow Button
+SW1       VAR     PORTE.0             
+
+'DOWN Arrow Button
+SW2       VAR     PORTE.1             
+
+'ENTER Button
+SW3       VAR     PORTE.2 
+
+'RIGHT Button
+SW4       VAR     PORTC.1
+
+'LEFT Button
+SW5       VAR     PORTC.0
+
+'Manual/PC Control Button
+SW6       VAR     PORTA.3
+
+'-------------------------------------------------------------------------------
+'  Solid State Relay (SSR) output port pin assignments
+'------------------------------------------------------------------------------- 
+'Relay output 0
+RELAY0    VAR     PORTB.3                                                                                                                                                            
+
+'Relay output 1
+RELAY1    VAR     PORTB.4
+
+'Relay output 2
+RELAY2    VAR     PORTB.5
+
+'-------------------------------------------------------------------------------
+'  Auxiliary PortA Input/Output port pin assignments
+'------------------------------------------------------------------------------- 
+'PORTA Digital I/O pin aliases
+PIN_A4    VAR     PORTA.4
+PIN_A5    VAR     PORTA.5
+
+'-------------------------------------------------------------------------------
+'  I/O pin assignment variables
+'------------------------------------------------------------------------------- 
+'Used to set state of selected pin to high or low
+PORTPIN      VAR    BYTE
+PINSTATE     VAR    BYTE
+
+'-------------------------------------------------------------------------------
+'  LED output port pin assignments
+'-------------------------------------------------------------------------------
+LED0      VAR     PORTA.0                                                                           
+LED1      VAR     PORTA.1
+LED2      VAR     PORTA.2
+
+'-------------------------------------------------------------------------------
+'  Buzzer port pin assignment
+'-------------------------------------------------------------------------------
+'Used for audible tone to indicate when process is complete
+BUZZER    VAR     PORTD.0
+
+'Used to determine how long to play audible tone note
+duration  VAR     BYTE
+
+'-------------------------------------------------------------------------------
+'  MAX6675 thermocouple port pin assignments
+'------------------------------------------------------------------------------- 
+'Serial clock pin
+CLK       VAR     PORTC.3
+
+'Serial data pin
+DAT       VAR     PORTC.4
+
+'Serial clock select pin
+CS        VAR     PORTC.5 
+
+'-------------------------------------------------------------------------------
+'  MAX6675 thermocouple temperature variables
+'-------------------------------------------------------------------------------
+BUFFERSIZE    CON     5
+ARRAY_TEMPS   VAR     WORD[BUFFERSIZE]
+curTemp       VAR     WORD
+setpoint      VAR     WORD
+
+minLimit        VAR    BYTE
+maxLimit        VAR    BYTE
+
+Tvar            VAR    BYTE
+TimeOn          VAR    BYTE
+cycleTime       VAR    BYTE
+                                                         
+outMin          VAR    BYTE
+outMax          VAR    BYTE
+
+outVal          VAR    WORD
+
+pTerm           VAR    WORD
+iTerm           VAR    WORD
+dTerm           VAR    WORD
+
+Kp              VAR    BYTE
+Ki              VAR    BYTE
+Kd              VAR    BYTE
+
+errorCurrent    VAR    WORD 
+lastMeasured    VAR    WORD
+
+'-------------------------------------------------------------------------------
+'  Variable needed for instant interrupts
+'-------------------------------------------------------------------------------
+wsave   VAR BYTE    $70     SYSTEM      ' alternate save location for W 
+
+'-------------------------------------------------------------------------------
+'  DS1307 real-time clock port pin assignments
+'-------------------------------------------------------------------------------
+'SQW           VAR     PORTB.0
+'SCL           VAR     PORTB.1
+'SDA           VAR     PORTB.2
+
+'-------------------------------------------------------------------------------
+'  DS1307 real-time clock port variables
+'-------------------------------------------------------------------------------
+'secs          VAR     BYTE
+'mins          VAR     BYTE
+'hrs           VAR     BYTE
+'wDay          VAR     BYTE
+'mDay          VAR     BYTE
+'mon           VAR     BYTE
+'yr            VAR     BYTE   
+'CTRL          VAR     BYTE 
+
+'-------------------------------------------------------------------------------
+'  Common routine variables
+'-------------------------------------------------------------------------------
+TRUE          CON     1
+FALSE         CON     0
+num1          VAR     BYTE
+num2          VAR     BYTE
+CMD           VAR     BYTE                                                                       
+
+'-------------------------------------------------------------------------------
+'  LCD backlight HPWM variable
+'-------------------------------------------------------------------------------
+;Store current backlight value
+level     VAR     BYTE 
+BKLT      VAR     PORTC.2                                                             
+                                                                    
+'-------------------------------------------------------------------------------
+'  Menu routine variables
+'-------------------------------------------------------------------------------
+'Current increment value
+index             VAR     BYTE
+
+'Current cursor position
+position          VAR     BYTE
+
+'Tracks menu type for button arrow routines
+MENU_TYPE         VAR     BYTE
+
+'-------------------------------------------------------------------------------
+'  Edit profile parameter variables
+'-------------------------------------------------------------------------------
+'Lower bounds value
+minVal    VAR     WORD                                                                                                                                          
+
+'Upper bounds value
+maxVal    VAR     WORD
+
+'Current value
+value     VAR     WORD
+
+'-------------------------------------------------------------------------------
+'  Profile variables
+'-------------------------------------------------------------------------------
+CURRENT_STATE            VAR    BYTE
+SOAK_TEMPERATURE         VAR    BYTE
+SOAK_TIME                VAR    BYTE
+REFLOW_TEMPERATURE       VAR    BYTE
+REFLOW_TIME              VAR    BYTE
+BAKE_TEMPERATURE         VAR    BYTE
+BAKE_TIME                VAR    WORD
+COOLDOWN_TEMPERATURE     VAR    BYTE
+COOLDOWN_TIME            VAR    BYTE
+startFlag                VAR    BYTE
+elapsedTime              VAR    WORD
+
+'-------------------------------------------------------------------------------
+'  EEPROM defaults
+'-------------------------------------------------------------------------------
+_SOAK_TEMPERATURE        DATA @0, 170
+_SOAK_TIME               DATA @1, 90
+_REFLOW_TEMPERATURE      DATA @2, 220
+_REFLOW_TIME             DATA @3, 30
+_BAKE_TEMPERATURE        DATA @4, 80
+_BAKE_TIME_LBYTE         DATA @5, $20
+_BAKE_TIME_HBYTE         DATA @6, $1C
+_COOLDOWN_TEMPERATURE    DATA @7, 60
+_COOLDOWN_TIME           DATA @8, 0
+_Kp                      DATA @9, 11 
+_Ki                      DATA @10, 5
+_Kd                      DATA @11, 1
+_cycleTime               DATA @12, 5
+
+'-------------------------------------------------------------------------------
+'  Profile states
+'-------------------------------------------------------------------------------
+WAITING_STATE           CON     0                   
+PREHEAT_STATE           CON     1                   
+SOAK_STATE              CON     2                   
+HEATING_STATE           CON     3                  
+REFLOW_STATE            CON     4                   
+COOLING_STATE           CON     5                   
+BAKE_STATE              CON     6                   
+
+'-------------------------------------------------------------------------------
+'  LCD initialization
+'-------------------------------------------------------------------------------
+LCD_INIT:   
+    PAUSE 1000   
+    
+    'Send custom characters to LCD memory
+    GOSUB CUSTOM_CHARACTERS
+     
+'-------------------------------------------------------------------------------
+'  Variable initialization
+'------------------------------------------------------------------------------- 
+INIT_VARIABLES:
+    'Initialize cursor position variable
+    position = 0
+    
+    'Initialize temperature routine variables
+    curTemp = 0
+    setpoint = 0
+    
+    GOSUB READ_PID
+    
+    minLimit = 0
+    maxLimit = cycleTime
+    
+    Tvar = 0
+    TimeOn = 0
+                                                             
+    outMin = minLimit
+    outMax = maxLimit
+
+    outVal = 0
+
+    pTerm = 0
+    iTerm = 0
+    dTerm = 0
+
+    errorCurrent = 0
+    lastMeasured = 0
+    
+    'Make sure all relays are off
+    PORTPIN = 1 : PINSTATE = 0 : GOSUB SET_PIN
+    PORTPIN = 2 : PINSTATE = 0 : GOSUB SET_PIN
+    PORTPIN = 3 : PINSTATE = 0 : GOSUB SET_PIN
+    
+    'Set LCD backlight to full brightness
+    level = 255
+    
+    'Initialize PC/manual control variable to manual control
+    'control = FALSE
+    startFlag = FALSE
+    
+    'Set initial profile state
+    CURRENT_STATE = WAITING_STATE
+    
+    'Initialize profile variables
+    GOSUB READ_PROFILE  
+      
+    ;Set LCD backlight to full brightness
+    HPWM 1, level, 32767
+    
+    'Check if Manual or PC control button is set. 1 = Manual, 0 = PC. 
+    'Switch is normally pulled high.
+    IF (SW6 = 0) THEN GOTO PC_CONTROL
+              
+'-------------------------------------------------------------------------------
+'  Main Menu
+'-------------------------------------------------------------------------------
+MAIN_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 2
+
+    'Display menu on LCD
+    lcdout $FE, $01, $FE, $0D, _
+    "-MENU-", $FE, $C0, _
+    "[1]Reflow [2]Bake", $FE, $94, _
+    "[3]Setup  [4]Tune", $FE, $D4, _
+    "[5]About  [6]Sensor"
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        CASE 1 : GOTO PREHEAT
+        CASE 2 : GOTO BAKE
+        case 3 : GOTO EDIT_PROFILE_MENU
+        case 4 : GOTO EDIT_PID_MENU
+        case 5 : GOSUB ABOUT
+        CASE 6 : GOSUB SENSOR_TEST
+        case else
+    end select   
+GOTO MAIN_MENU
+
+'-------------------------------------------------------------------------------
+'  PROFILE Menu
+'-------------------------------------------------------------------------------
+EDIT_PROFILE_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 2
+    
+    'Display menu on LCD
+    lcdout $FE, $01, $FE, $0D, _
+    "-EDIT PROFILE-", $FE, $C0, _
+    "[1]Soak   [2]Reflow", $FE, $94, _
+    "[3]Bake   [4]Cool", $FE, $D4, _
+    "[5]Save   ", "[", $03, "]"
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        CASE 1 : GOTO EDIT_SOAK_MENU
+        CASE 2 : GOTO EDIT_REFLOW_MENU
+        case 3 : GOTO EDIT_BAKE_MENU
+        case 4 : GOTO EDIT_COOLDOWN_MENU
+        case 5 : GOSUB WRITE_PROFILE
+        CASE 6 : GOTO MAIN_MENU
+        case else
+    end select   
+GOTO EDIT_PROFILE_MENU
+
+'-------------------------------------------------------------------------------
+'  Edit soak profile parameters
+'-------------------------------------------------------------------------------
+EDIT_SOAK_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 1
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-EDIT SOAK-"
+    
+    GOSUB PROFILE_DIALOG
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        case 1 : GOSUB EDIT_SOAK_TEMP
+        case 2 : GOSUB EDIT_SOAK_TIME
+        case 3 : GOTO EDIT_PROFILE_MENU
+        case else
+    end select
+GOTO EDIT_SOAK_MENU
+
+'-------------------------------------------------------------------------------
+'  Edit reflow profile parameters
+'-------------------------------------------------------------------------------
+EDIT_REFLOW_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 1
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-EDIT REFLOW-"
+    
+    GOSUB PROFILE_DIALOG
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        case 1 : GOSUB EDIT_REFLOW_TEMP
+        case 2 : GOSUB EDIT_REFLOW_TIME
+        case 3 : GOTO EDIT_PROFILE_MENU
+        case else
+    end select
+GOTO EDIT_REFLOW_MENU
+
+'-------------------------------------------------------------------------------
+'  Edit bake profile parameters
+'-------------------------------------------------------------------------------
+EDIT_BAKE_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 1
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-EDIT BAKE-"
+    
+    GOSUB PROFILE_DIALOG
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        case 1 : GOSUB EDIT_BAKE_TEMP
+        case 2 : GOSUB EDIT_BAKE_TIME
+        case 3 : GOTO EDIT_PROFILE_MENU
+        case else
+    end select
+GOTO EDIT_BAKE_MENU
+
+'-------------------------------------------------------------------------------
+'  Edit cooldown profile parameters
+'-------------------------------------------------------------------------------
+EDIT_COOLDOWN_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 1
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-EDIT COOLDOWN-"
+    
+    GOSUB PROFILE_DIALOG
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        case 1 : GOSUB EDIT_COOLDOWN_TEMP
+        case 2 : GOSUB EDIT_COOLDOWN_TIME
+        case 3 : GOTO EDIT_PROFILE_MENU
+        case else
+    end select
+GOTO EDIT_COOLDOWN_MENU
+
+'-------------------------------------------------------------------------------
+'  Edit profile dialog
+'-------------------------------------------------------------------------------
+PROFILE_DIALOG:
+    'Display menu on LCD
+    lcdout $FE, $C0, _
+    "[1] Temperature", $FE, $94, _
+    "[2] Time", $FE, $D4, _
+    "[", $03, "]"
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit soak phase temperature parameters
+'-------------------------------------------------------------------------------
+EDIT_SOAK_TEMP:
+    'Set min and max temperature values
+    minVal = 10
+    maxVal = 230
+    
+    'Initialize value with current temperature setting
+    value = SOAK_TEMPERATURE
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-SOAK TEMP-"
+    
+    GOSUB EDIT_TEMP_DIALOG
+        
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    SOAK_TEMPERATURE = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit soak phase time parameters
+'-------------------------------------------------------------------------------
+EDIT_SOAK_TIME:
+    'Set min and max time values
+    minVal = 10
+    maxVal = 250
+    
+    'Initialize value with current time setting
+    value = SOAK_TIME
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-SOAK TIME-"
+    
+    GOSUB EDIT_TIME_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    SOAK_TIME = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit reflow phase temperature parameters
+'-------------------------------------------------------------------------------
+EDIT_REFLOW_TEMP:
+    'Set min and max temperature values
+    minVal = 10
+    maxVal = 230
+    
+    'Initialize value with current temperature setting
+    value = REFLOW_TEMPERATURE
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-REFLOW TEMP-"
+    
+    GOSUB EDIT_TEMP_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    REFLOW_TEMPERATURE = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit reflow phase time parameters
+'-------------------------------------------------------------------------------
+EDIT_REFLOW_TIME:
+    'Set min and max time values
+    minVal = 1
+    maxVal = 60
+    
+    'Initialize value with current time setting
+    value = REFLOW_TIME
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-REFLOW TIME-"
+    
+    GOSUB EDIT_TIME_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    REFLOW_TIME = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit bake phase temperature parameters
+'-------------------------------------------------------------------------------
+EDIT_BAKE_TEMP:
+    'Set min and max temperature values
+    minVal = 1
+    maxVal = 230
+    
+    'Initialize value with current temperature setting
+    value = BAKE_TEMPERATURE
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-BAKE TEMP-"
+    
+    GOSUB EDIT_TEMP_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    BAKE_TEMPERATURE = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit bake phase time parameters
+'-------------------------------------------------------------------------------
+EDIT_BAKE_TIME:
+    'Set min and max time values
+    minVal = 1
+    maxVal = 7200
+    
+    'Initialize value with current time setting
+    value = BAKE_TIME
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-BAKE TIME-"
+    
+    GOSUB EDIT_TIME_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    BAKE_TIME = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit cooldown phase temperature parameters
+'-------------------------------------------------------------------------------
+EDIT_COOLDOWN_TEMP:
+    'Set min and max temperature values
+    minVal = 27
+    maxVal = 60
+    
+    'Initialize value with current temperature setting
+    value = COOLDOWN_TEMPERATURE
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-COOLDOWN TEMP-"
+    
+    GOSUB EDIT_TEMP_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    COOLDOWN_TEMPERATURE = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit cooldown phase time parameters
+'-------------------------------------------------------------------------------
+EDIT_COOLDOWN_TIME:
+    'Set min and max time values
+    minVal = 0
+    maxVal = 255
+    
+    'Initialize value with current time setting
+    value = COOLDOWN_TIME
+    
+    'Initialize edit value cursor position
+    position = 70
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-COOLDOWN TIME-"
+    
+    GOSUB EDIT_TIME_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement temperature value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    COOLDOWN_TIME = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit temperature dialog
+'-------------------------------------------------------------------------------
+EDIT_TEMP_DIALOG:
+    'Display menu on LCD
+    lcdout $FE, $C0, _
+    "Temp: ", DEC4 value, $00, "C", $FE, $94, _
+    "Min: ", DEC minVal, " Max: ", DEC maxVal, $FE, $D4, _
+    "[", $01, "]", "  ", "[", $02, "]", "  ", "[", $03, "]"
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit time dialog
+'-------------------------------------------------------------------------------
+EDIT_TIME_DIALOG:
+    'Display menu on LCD
+    lcdout $FE, $C0, _
+    "Temp: ", DEC4 value, " Sec", $FE, $94, _
+    "Min: ", DEC minVal, " Max: ", DEC maxVal, $FE, $D4, _
+    "[", $01, "]", "  ", "[", $02, "]", "  ", "[", $03, "]"
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit PID parameters
+'-------------------------------------------------------------------------------
+EDIT_PID_MENU:
+    'Set current index position
+    index = 1
+    MENU_TYPE = 2
+    
+    'Display menu on LCD
+    lcdout $FE, $01, _
+    "-TUNE PID-", $FE, $C0, _
+    "[1]Kp     [2]Ki", $FE, $94, _
+    "[3]Kd     [4]Cycle", $FE, $D4, _
+    "[5]Save   ", "[", $03, "]"
+    
+    'Set current cursor position to first selection on menu
+    position = 65 : GOSUB SET_CURSOR
+    
+    'Process buttons
+    GOSUB MENU_BUTTONS
+    
+    'Jump to menu selection
+    select case index
+        case 1 : GOSUB EDIT_KP
+        case 2 : GOSUB EDIT_KI
+        case 3 : GOSUB EDIT_KD
+        CASE 4 : GOSUB EDIT_CYCLE_TIME
+        CASE 5 : GOSUB WRITE_PID
+        CASE 6 : GOTO MAIN_MENU
+        case else
+    end select
+GOTO EDIT_PID_MENU
+
+'-------------------------------------------------------------------------------
+'  Hardware revision and firmware version  
+'-------------------------------------------------------------------------------
+ABOUT:
+    'Splash screen
+    LCDOUT $FE, $01, $FE, $0C, _ 
+    "-About-", $FE, $C0, _
+    "Hobbybotics", $FE, $94, _
+    "Reflow Controller", $FE, $D4, _
+    "V8.03  Firmware 5F"
+    
+    GOSUB BUTTON_PRESS
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit Kp parameter
+'-------------------------------------------------------------------------------
+EDIT_KP:
+    'Set min and max Kp values
+    minVal = 0
+    maxVal = 255
+    
+    'Initialize value with current proportional setting
+    value = Kp
+    
+    'Initialize edit value cursor position
+    position = 71
+    
+    'Display menu on LCD
+lcdout $FE, $01, "-PROPORTIONAL-"
+    
+    GOSUB EDIT_PID_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement Kp value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    Kp = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit Ki parameter
+'-------------------------------------------------------------------------------
+EDIT_KI:
+    'Set min and max Ki values
+    minVal = 0
+    maxVal = 255
+    
+    'Initialize value with current integral setting
+    value = Ki
+    
+    'Initialize edit value cursor position
+    position = 71
+    
+    'Display menu on LCD
+     lcdout $FE, $01, "-INTEGRAL-"
+    
+    GOSUB EDIT_PID_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement Ki value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    Ki = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit Kd parameter
+'-------------------------------------------------------------------------------
+EDIT_KD:
+    'Set min and max Kd values
+    minVal = 0
+    maxVal = 255
+    
+    'Initialize value with current derivative setting
+    value = Kd
+    
+    'Initialize edit value cursor position
+    position = 71
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-DERIVATIVE-"
+    
+    GOSUB EDIT_PID_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement Kd value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    Kd = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit Kd parameter
+'-------------------------------------------------------------------------------
+EDIT_CYCLE_TIME:
+    'Set min and max Cycle Time values
+    minVal = 0
+    maxVal = 10
+    
+    'Initialize value with current Cycle Time setting
+    value = cycleTime
+    
+    'Initialize edit value cursor position
+    position = 71
+    
+    'Display menu on LCD
+    lcdout $FE, $01, "-CYCLE TIME-"
+    
+    GOSUB EDIT_PID_DIALOG
+    
+    'Set cursor position 
+    GOSUB SET_CURSOR
+    
+    'Increment or decrement Cycle Time value
+    GOSUB PROFILE_BUTTONS
+    
+    'Store new value
+    cycleTime = value
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit PID tunings dialog
+'-------------------------------------------------------------------------------
+EDIT_PID_DIALOG:
+    lcdout $FE, $C0, _
+    "Value: ", DEC4 value, $FE, $94, _
+    "Min: ", DEC minVal, " Max: ", DEC maxVal, $FE, $D4, _
+    "[", $01, "]", "  ", "[", $02, "]", "  ", "[", $03, "]"
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Menu selection routine
+'-------------------------------------------------------------------------------
+MENU_BUTTONS:
+    'Process ENTER key
+    WHILE (SW3 <> 0)
+       
+       'Process UP arrow button
+       IF (SW1 = 0) THEN
+          WHILE (SW1 = 0) : WEND
+          PAUSE 50
+            
+          IF (SW1 = 1) THEN GOSUB ARROW_UP  
+       ENDIF
+        
+       'Process DOWN arrow button
+       IF (SW2 = 0) THEN
+          WHILE (SW2 = 0) : WEND
+          PAUSE 50
+
+          IF (SW2 = 1) THEN GOSUB ARROW_DOWN
+       ENDIF
+        
+       'Process RIGHT arrow button
+       IF (SW4 = 0) THEN
+          WHILE (SW4 = 0) : WEND
+          PAUSE 50
+            
+          IF (SW4 = 1) THEN GOSUB ARROW_RIGHT
+       ENDIF
+        
+       'Process LEFT arrow button
+       IF (SW5 = 0) THEN
+          WHILE (SW5 = 0) : WEND
+          PAUSE 50
+            
+          IF (SW5 = 1) THEN GOSUB ARROW_LEFT
+       ENDIF
+    WEND
+    
+    PAUSE 300
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Edit profile values button routine
+'-------------------------------------------------------------------------------
+PROFILE_BUTTONS:
+    'Check for ENTER button
+    WHILE (SW3 <> 0)
+        
+        'Increase value button
+        IF (SW1 = 0) THEN
+           WHILE (SW1 = 0): WEND
+           PAUSE 50
+           
+           IF (value >= maxVal) THEN 
+               value = maxVal
+           ELSE
+               value = value + 1
+           ENDIF
+           GOSUB SET_CURSOR : LCDOUT DEC4 value : GOSUB SET_CURSOR
+        ENDIF
+        
+        'Decrease value button
+        IF (SW2 = 0) THEN
+            WHILE (SW2 = 0) : WEND
+            PAUSE 50
+            
+            IF (value <= minVal) THEN
+                value = minVal
+            ELSE
+                value = value - 1
+            ENDIF
+            GOSUB SET_CURSOR : LCDOUT DEC4 value : GOSUB SET_CURSOR
+        ENDIF  
+     WEND
+     position = 95
+     GOSUB SET_CURSOR
+    
+     PAUSE 300
+
+     GOSUB BUTTON_PRESS
+ RETURN
+
+'-------------------------------------------------------------------------------
+'  Scroll cursor up
+'-------------------------------------------------------------------------------
+ARROW_UP:
+    ' Dual column menu
+    IF (MENU_TYPE <> 1) THEN
+       SELECT CASE position
+           CASE 65: position = 95 : index = 6 : GOSUB SET_CURSOR : RETURN 
+           CASE 95: position = 31 : index = 4 : GOSUB SET_CURSOR : RETURN 
+           CASE 31: position = 75 : index = 2 : GOSUB SET_CURSOR : RETURN 
+           CASE 75: position = 85 : index = 5 : GOSUB SET_CURSOR : RETURN 
+           CASE 85: position = 21 : index = 3 : GOSUB SET_CURSOR : RETURN 
+           CASE 21: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN 
+           CASE ELSE
+       END SELECT 
+    ' Single column menu
+    ELSE
+       SELECT CASE position
+           CASE 65: position = 85 : index = 3 : GOSUB SET_CURSOR : RETURN 
+           CASE 85: position = 21 : index = 2 : GOSUB SET_CURSOR : RETURN 
+           CASE 21: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ENDIF
+'-------------------------------------------------------------------------------
+'  Scroll cursor down
+'-------------------------------------------------------------------------------
+ARROW_DOWN:
+    ' Dual column menu
+    IF (MENU_TYPE <> 1) THEN
+       SELECT CASE position
+           CASE 65: position = 21 : index = 3 : GOSUB SET_CURSOR : RETURN
+           CASE 21: position = 85 : index = 5 : GOSUB SET_CURSOR : RETURN
+           CASE 85: position = 75 : index = 2 : GOSUB SET_CURSOR : RETURN
+           CASE 75: position = 31 : index = 4 : GOSUB SET_CURSOR : RETURN
+           CASE 31: position = 95 : index = 6 : GOSUB SET_CURSOR : RETURN
+           CASE 95: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT      
+    ' Single column menu
+    ELSE
+       SELECT CASE position
+           CASE 65: position = 21 : index = 2 : GOSUB SET_CURSOR : RETURN 
+           CASE 21: position = 85 : index = 3 : GOSUB SET_CURSOR : RETURN 
+           CASE 85: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ENDIF
+
+'-------------------------------------------------------------------------------
+'  Scroll cursor right
+'-------------------------------------------------------------------------------
+ARROW_RIGHT:
+    ' Dual column menu
+    IF (MENU_TYPE <> 1) THEN
+       SELECT CASE position
+           CASE 65: position = 75 : index = 2 : GOSUB SET_CURSOR : RETURN
+           CASE 75: position = 21 : index = 3 : GOSUB SET_CURSOR : RETURN
+           CASE 21: position = 31 : index = 4 : GOSUB SET_CURSOR : RETURN
+           CASE 31: position = 85 : index = 5 : GOSUB SET_CURSOR : RETURN
+           CASE 85: position = 95 : index = 6 : GOSUB SET_CURSOR : RETURN
+           CASE 95: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ' Single column menu
+    ELSE
+       SELECT CASE position
+           CASE 65: position = 21 : index = 2 : GOSUB SET_CURSOR : RETURN 
+           CASE 21: position = 85 : index = 3 : GOSUB SET_CURSOR : RETURN 
+           CASE 85: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ENDIF       
+
+'-------------------------------------------------------------------------------
+'  Scroll cursor left
+'-------------------------------------------------------------------------------
+ARROW_LEFT:
+    ' Dual column menu
+    IF (MENU_TYPE <> 1) THEN
+       SELECT CASE position
+           CASE 65: position = 95 : index = 6 : GOSUB SET_CURSOR : RETURN
+           CASE 95: position = 85 : index = 5 : GOSUB SET_CURSOR : RETURN
+           CASE 85: position = 31 : index = 4 : GOSUB SET_CURSOR : RETURN
+           CASE 31: position = 21 : index = 3 : GOSUB SET_CURSOR : RETURN
+           CASE 21: position = 75 : index = 2 : GOSUB SET_CURSOR : RETURN
+           CASE 75: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ' Single column menu
+    ELSE
+       SELECT CASE position
+           CASE 65: position = 85 : index = 3 : GOSUB SET_CURSOR : RETURN 
+           CASE 85: position = 21 : index = 2 : GOSUB SET_CURSOR : RETURN 
+           CASE 21: position = 65 : index = 1 : GOSUB SET_CURSOR : RETURN
+           CASE ELSE
+       END SELECT
+    ENDIF       
+
+'-------------------------------------------------------------------------------
+'  Set LCD cursor position
+'-------------------------------------------------------------------------------
+SET_CURSOR:
+    LCDOUT $FE, $80 + position
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Read temperature 
+'-------------------------------------------------------------------------------
+READ_TEMPERATURE:
+    'Get a sampling of temperature values and write to temperature array
+    FOR index = 0 TO BUFFERSIZE - 1
+        LOW CS
+        SHIFTIN DAT, CLK, 0,[curTemp\16]
+        HIGH CS
+        
+        ARRAY_TEMPS[index] = curTemp>>5
+        PAUSE 179
+    NEXT index
+    
+    curTemp = 0
+    
+    'Add up all the values in the array
+    FOR index = 0 TO BUFFERSIZE - 1
+        curTemp = curTemp + ARRAY_TEMPS[index]
+    NEXT index
+    
+    'Take an average of the temperature values
+    curTemp = curTemp/BUFFERSIZE
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Display status to LCD 
+'-------------------------------------------------------------------------------
+DISPLAY_STATUS:
+    LCDOUT $FE, $C0, "Temperature: ", DEC3 curTemp, $00, "C", _
+           $FE, $94, "Setpoint: ", DEC3 setpoint, $00, "C"
+    
+    IF (elapsedTime = 0) THEN
+       LCDOUT $FE, $D4, "Sec: N/A"
+    ELSE
+        LCDOUT $FE, $D4, "Sec: ", DEC4 elapsedTime
+    ENDIF
+    
+    IF (startFlag = TRUE) THEN GOSUB TRANSMIT_DATA
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Transmit serial data to PC 
+'-------------------------------------------------------------------------------
+TRANSMIT_DATA:
+    HSEROUT [CURRENT_STATE, curTemp, setpoint, RELAY0, RELAY1, _ 
+             elapsedTime.Byte1, elapsedTime.Byte0, startFlag, _
+             Hours, Minutes, Seconds, Kp, Ki, Kd, cycleTime, _
+             pTerm, iTerm, dTerm, outVal]
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Sensor test. Just continously reads temperature 
+'-------------------------------------------------------------------------------
+SENSOR_TEST:
+    lcdout $FE, $01, _
+           "-SENSOR TEST- ", $FE, $C0, _
+           "Temperature: ", $FE, $94, _
+           "[", $03, "]", $FE, $0D 
+           
+    WHILE (SW3 <> 0)
+        GOSUB READ_TEMPERATURE
+        position = 77 : GOSUB SET_CURSOR
+        LCDOUT DEC3 curTemp, $00, "C"  
+        position = 21 : GOSUB SET_CURSOR
+        GOSUB TRANSMIT_DATA
+    WEND
+    
+    PAUSE 1000
+    'PAUSE 300
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Preheat phase 
+'-------------------------------------------------------------------------------
+PREHEAT:
+    CURRENT_STATE = PREHEAT_STATE
+    setpoint = SOAK_TEMPERATURE
+    elapsedTime = 0
+    startFlag = TRUE
+    
+    LCDOUT $FE, $01, "-PREHEAT PHASE-"
+       
+    GOSUB READ_TEMPERATURE
+    
+    IF (curTemp > 60) THEN GOTO COOLING
+    
+    ' Turn ON Heater
+    PORTPIN = 1 : PINSTATE = 1 : GOSUB SET_PIN
+    ' Turn ON Fan
+    PORTPIN = 2 : PINSTATE = 1 : GOSUB SET_PIN
+    GOSUB RAMP_UP
+    
+'-------------------------------------------------------------------------------
+'  Soak phase 
+'-------------------------------------------------------------------------------
+SOAK:
+    CURRENT_STATE = SOAK_STATE
+    setpoint = SOAK_TEMPERATURE
+    elapsedTime = SOAK_TIME
+    
+    LCDOUT $FE, $01, "-SOAK PHASE-"
+    
+    GOSUB PROCESS_PHASE
+    PORTPIN = 1 : PINSTATE = 1 : GOSUB SET_PIN
+    
+'-------------------------------------------------------------------------------
+'  Heating phase 
+'-------------------------------------------------------------------------------
+HEATING:
+    CURRENT_STATE = HEATING_STATE
+    setpoint = REFLOW_TEMPERATURE
+    elapsedTime = 0
+    
+    LCDOUT $FE, $01, "-HEATING PHASE-" 
+    
+    GOSUB RAMP_UP
+    
+'-------------------------------------------------------------------------------
+'  Reflow phase 
+'-------------------------------------------------------------------------------
+REFLOW:
+    CURRENT_STATE = REFLOW_STATE
+    setpoint = REFLOW_TEMPERATURE
+    elapsedTime = REFLOW_TIME
+    
+    LCDOUT $FE, $01, "-REFLOW PHASE-"
+    
+    GOSUB PROCESS_PHASE
+    
+'-------------------------------------------------------------------------------
+'  Cooling phase 
+'-------------------------------------------------------------------------------
+COOLING:
+    CURRENT_STATE = COOLING_STATE
+    setpoint = COOLDOWN_TEMPERATURE
+    elapsedTime = COOLDOWN_TIME
+    
+    ' Turn OFF Heater
+    PORTPIN = 1 : PINSTATE = 0 : GOSUB SET_PIN
+    GOSUB BEEP
+    
+    ' Turn ON Fan
+    PORTPIN = 2 : PINSTATE = 1 : GOSUB SET_PIN
+    
+    LCDOUT $FE, $01, "-COOLDOWN-"
+    
+    WHILE (curTemp > setpoint)
+        GOSUB READ_TEMPERATURE
+        GOSUB DISPLAY_STATUS
+    WEND
+    
+    Gosub StopTimer 
+    GOSUB ResetTime
+    
+    ' Turn OFF Fan
+    PORTPIN = 2 : PINSTATE = 0 : GOSUB SET_PIN
+    
+    startFlag = FALSE
+    
+    GOSUB BEEP
+    
+    CURRENT_STATE = WAITING_STATE
+    setpoint = 0
+    elapsedTime = 0
+    
+    GOSUB TRANSMIT_DATA
+       
+    LCDOUT $FE, $01, $FE, $0D, _ 
+    "Operation completed.", $FE, $C0, _
+    "[", $03, "]"
+    
+    position = 65 : GOSUB SET_CURSOR : GOSUB BUTTON_PRESS
+    
+    GOTO INIT_VARIABLES
+
+'-------------------------------------------------------------------------------
+'  Bake phase 
+'-------------------------------------------------------------------------------
+BAKE:
+    CURRENT_STATE = BAKE_STATE
+    setpoint = BAKE_TEMPERATURE
+    elapsedTime = BAKE_TIME
+    
+    ' Turn ON Heater
+    PORTPIN = 1 : PINSTATE = 1 : GOSUB SET_PIN
+    ' Turn ON Fan
+    PORTPIN = 2 : PINSTATE = 1 : GOSUB SET_PIN
+    
+    startFlag = TRUE
+
+    LCDOUT $FE, $01, "-BAKE PHASE-"
+    
+    GOSUB PROCESS_PHASE       
+GOTO COOLING
+
+'-------------------------------------------------------------------------------
+'  Regulates heater controls based on phase temperature parameters 
+'-------------------------------------------------------------------------------
+PROCESS_PHASE:      
+    GOSUB READ_TEMPERATURE
+    GOSUB COMPUTE_PID
+
+    WHILE (elapsedTime <> 0)
+        IF (SecondsChanged = 1) THEN 
+            elapsedTime = elapsedTime - 1
+            
+            GOSUB READ_TEMPERATURE
+            GOSUB COMPUTE_PID
+         
+            TimeOn = (cycleTime * OutVal)/100
+            
+            Tvar = Tvar + 1
+            
+            IF (Tvar >= outMax) THEN Tvar = outMin
+            
+            IF (Tvar < TimeOn AND curTemp < setpoint) THEN
+               PORTPIN = 1 : PINSTATE = 1 : GOSUB SET_PIN
+            ELSE 
+                PORTPIN = 1 : PINSTATE = 0 : GOSUB SET_PIN
+            ENDIF
+            
+            GOSUB DISPLAY_STATUS
+            
+            SecondsChanged = 0
+        ENDIF
+    WEND     
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Ramps up to setpoint 
+'-------------------------------------------------------------------------------
+RAMP_UP:     
+    GOSUB StartTimer
+    
+    WHILE (curTemp < setpoint)
+        IF (SecondsChanged = 1) THEN           
+            GOSUB READ_TEMPERATURE
+            GOSUB COMPUTE_PID
+         
+            TimeOn = (cycleTime * OutVal)/100
+            
+            Tvar = Tvar + 1
+            
+            IF (Tvar >= outMax) THEN Tvar = outMin
+            
+            IF (Tvar < TimeOn) THEN
+               PORTPIN = 1 : PINSTATE = 1 : GOSUB SET_PIN
+            ELSE 
+                PORTPIN = 1 : PINSTATE = 0 : GOSUB SET_PIN
+            ENDIF
+            
+            GOSUB DISPLAY_STATUS
+            
+            SecondsChanged = 0
+        ENDIF
+    WEND
+RETURN 
+
+'-------------------------------------------------------------------------------
+'  Procedure:  COMPUTE_PID()
+'  Description:  Contains the PID algorithm.
+'  Ins:  None
+'  Outs: None
+'-------------------------------------------------------------------------------
+COMPUTE_PID:     
+    errorCurrent = setpoint - curTemp
+    
+    pTerm = Kp * errorCurrent
+       
+    iTerm = iTerm + (Ki * errorCurrent)
+       
+    IF (iterm > outMax) THEN iTerm = outMax
+    IF (iTerm < outMin) THEN iTerm = outMin
+ 
+    dTerm = (curTemp - lastMeasured)
+    
+    OutVal = (pTerm + (iTerm - (Kd * dTerm)))
+
+    lastMeasured = curTemp
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Controller is under PC control
+'-------------------------------------------------------------------------------
+PC_CONTROL:  
+    LCDOUT $FE, $01, "PC Control..."
+    
+    HSERIN [WAIT(254), CMD]
+    
+    SELECT CASE CMD
+        CASE 0 : GOSUB SERIAL_UPDATE_PROFILE
+                 GOSUB WRITE_PROFILE
+        CASE 1 : GOTO PREHEAT
+        CASE 2 : GOTO BAKE
+        CASE 3 : GOSUB SERIAL_UPDATE_PID
+                 GOSUB WRITE_PID
+        CASE 4 : GOSUB SENSOR_TEST
+        CASE 5 : GOTO INIT_VARIABLES
+        CASE 6 : HSERIN[PORTPIN, PINSTATE] : GOSUB SET_PIN
+        CASE 7 : GOSUB TRANSMIT_DATA
+        CASE ELSE
+    END SELECT
+GOTO PC_CONTROL
+
+'-------------------------------------------------------------------------------
+'  Read profile settings from EEPROM
+'-------------------------------------------------------------------------------
+READ_PROFILE:
+     READ _SOAK_TEMPERATURE, SOAK_TEMPERATURE
+     READ _SOAK_TIME, SOAK_TIME
+     READ _REFLOW_TEMPERATURE, REFLOW_TEMPERATURE
+     READ _REFLOW_TIME, REFLOW_TIME
+     READ _BAKE_TEMPERATURE, BAKE_TEMPERATURE
+     READ _BAKE_TIME_LBYTE, BAKE_TIME.BYTE0
+     READ _BAKE_TIME_HBYTE, BAKE_TIME.BYTE1
+     READ _COOLDOWN_TEMPERATURE, COOLDOWN_TEMPERATURE
+     READ _COOLDOWN_TIME, COOLDOWN_TIME
+RETURN
+ 
+'-------------------------------------------------------------------------------
+'  Read profile settings from EEPROM
+'-------------------------------------------------------------------------------
+WRITE_PROFILE:
+     WRITE _SOAK_TEMPERATURE, SOAK_TEMPERATURE
+     WRITE _SOAK_TIME, SOAK_TIME
+     WRITE _REFLOW_TEMPERATURE, REFLOW_TEMPERATURE
+     WRITE _REFLOW_TIME, REFLOW_TIME
+     WRITE _BAKE_TEMPERATURE, BAKE_TEMPERATURE
+     WRITE _BAKE_TIME_LBYTE, BAKE_TIME.BYTE0
+     WRITE _BAKE_TIME_HBYTE, BAKE_TIME.BYTE1
+     WRITE _COOLDOWN_TEMPERATURE, COOLDOWN_TEMPERATURE
+     WRITE _COOLDOWN_TIME, COOLDOWN_TIME
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Read profile settings from EEPROM
+'-------------------------------------------------------------------------------
+READ_PID:
+     READ _Kp, Kp
+     READ _Ki, Ki
+     READ _Kd, Kd
+     READ _cycleTime, cycleTime
+RETURN
+ 
+'-------------------------------------------------------------------------------
+'  Read profile settings from EEPROM
+'-------------------------------------------------------------------------------
+WRITE_PID:
+     WRITE _Kp, Kp
+     WRITE _Ki, Ki
+     WRITE _Kd, Kd
+     WRITE _cycleTime, cycleTime
+RETURN
+ 
+'-------------------------------------------------------------------------------
+'  Receive profile settings from serial port
+'-------------------------------------------------------------------------------
+SERIAL_UPDATE_PROFILE:
+     'Below can be comment/uncommented if you do/don't have enough program space
+     
+     LCDOUT $FE, $01, "Receiving updates..."
+     
+     'Allow profile updates from PC if enabled
+     HSERIN [SOAK_TEMPERATURE, SOAK_TIME, _
+             REFLOW_TEMPERATURE, REFLOW_TIME, _
+             BAKE_TEMPERATURE, BAKE_TIME.Byte0, BAKE_TIME.Byte1] 
+             
+     'We need to convert to a word value
+     BAKE_TIME = ((BAKE_TIME.Byte0 * 100) | BAKE_TIME.Byte1)
+    
+'Below can be comment/uncommented if you do/don't have enough program space
+
+'     LCDOUT $FE, $01, _
+'     "Soak Temp: ", DEC3 SOAK_TEMPERATURE, $08, "C", $FE, $C0, _
+'     "Time: ", DEC3 SOAK_TIME, " Sec", $FE, $94, _
+'     "Reflow Temp: ", DEC3 REFLOW_TEMPERATURE, $08, "C", $FE, $D4, _
+'     "Time: ", DEC3 REFLOW_TIME, " Sec ", "[", $03, "]"
+     
+'     position = 99 : GOSUB SET_CURSOR : GOSUB BUTTON_PRESS 
+     
+'     LCDOUT $FE, $01, _
+'     "Bake Temp: ", DEC3 BAKE_TEMPERATURE, $08, "C", $FE, $C0, _
+'     "Time: ", DEC4 BAKE_TIME, " Sec ", "[", $03, "]"
+     
+'     position = 80 : GOSUB SET_CURSOR : GOSUB BUTTON_PRESS
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Receive PID settings from serial port
+'-------------------------------------------------------------------------------
+SERIAL_UPDATE_PID:
+    'Below can be comment/uncommented if you do/don't have enough program space
+    
+    LCDOUT $FE, $01, "Receiving updates..."
+    
+    HSERIN [Kp, Ki, Kd, cycleTime]
+    
+'Below can be comment/uncommented if you do/don't have enough program space
+
+'    LCDOUT $FE, $01, _
+'     "Kp =  ", DEC3 Kp, $FE, $C0, _
+'     "Ki =  ", DEC3 Ki, $FE, $94, _
+'     "Kd = ", DEC3 Kd, $FE, $D4, _
+'     "Cycle Time = ", DEC3 cycleTime, " ", "[", $03, "]"
+     
+'     position = 102 : GOSUB SET_CURSOR : GOSUB BUTTON_PRESS 
+RETURN
+     
+'-------------------------------------------------------------------------------
+'  Wait for <ENTER> button to be pressed routine
+'-------------------------------------------------------------------------------
+BUTTON_PRESS:
+    WHILE (SW3 <> 0) : WEND
+    PAUSE 300 
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Set port pin ON or OFF
+'-------------------------------------------------------------------------------
+SET_PIN:
+    IF (PINSTATE = 0) THEN
+       SELECT CASE (PORTPIN)
+           CASE 1: LOW RELAY0 : LOW LED0
+           CASE 2: LOW RELAY1 : LOW LED1
+           CASE 3: LOW RELAY2 : LOW LED2
+           CASE 4: LOW PIN_A4
+           CASE 5: LOW PIN_A5
+           CASE ELSE
+       END SELECT
+    ENDIF
+    
+    IF (PINSTATE = 1) THEN
+       SELECT CASE (PORTPIN)
+           CASE 1: HIGH RELAY0 : HIGH LED0
+           CASE 2: HIGH RELAY1 : HIGH LED1
+           CASE 3: HIGH RELAY2 : HIGH LED2
+           CASE 4: HIGH PIN_A4
+           CASE 5: HIGH PIN_A5
+           CASE ELSE
+       END SELECT
+    ENDIF
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Custom characters used for menu routines
+'-------------------------------------------------------------------------------
+CUSTOM_CHARACTERS:
+    'Degree symbol, UP arrow, DOWN arrow and ENTER symbol
+    LCDOUT $FE, LCD_CGRAM + $00, _
+           $08, $14, $08, $00, $00, $00, $00, $00, _     
+           $FE, LCD_CGRAM + $08, _
+           $04, $0E, $1F, $04, $04, $04, $04, $00, _       
+           $FE, LCD_CGRAM + $10, _
+           $04, $04, $04, $04, $1F, $0E, $04, $00, _    
+           $FE, LCD_CGRAM + $18, _
+           $00, $01, $05, $0D, $1F, $0C, $04, $00, _
+           $FE, $01    
+RETURN
+
+'-------------------------------------------------------------------------------
+'  Generate tone on buzzer to indicate completed profile process 
+'-------------------------------------------------------------------------------
+BEEP:
+    SOUND BUZZER,[100,10,127,10]
+    PAUSE 100
+    SOUND BUZZER,[100,10,127,10]
+RETURN

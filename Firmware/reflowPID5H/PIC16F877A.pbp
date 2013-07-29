@@ -1,0 +1,11 @@
+'****************************************************************
+'*  Name    : PIC16F877A.PBP                                    *
+'*  Author  : Curtis Brooks                                     *
+'*  Notice  : Copyright (c) 2009 Hobbybotics                    *
+'*          : All Rights Reserved                               *
+'*  Date    : 12/29/2009                                        *
+'*  Version : 1.0                                               *
+'*  Notes   :                                                   *
+'*          :                                                   *
+'****************************************************************
+@ __CONFIG _HS_OSC & _WDT_ON & _BODEN_OFF & _PWRTE_ON & _CP_OFF & _LVP_OFF & _WRT_OFF

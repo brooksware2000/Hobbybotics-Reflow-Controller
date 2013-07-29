@@ -1,0 +1,45 @@
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.exe.config
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.exe
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.pdb
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.exe
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.pdb
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\DS1307Lib.dll
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\FileLib.dll
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\SerialLib.dll
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ZedGraph.dll
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\DS1307Lib.pdb
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\FileLib.pdb
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\SerialLib.pdb
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmAboutBox.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmAppSettings.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmPIDSettings.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmProfileSettings.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmMainWindow.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.Properties.Resources.resources
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\GenerateResource.read.1.tlog
+C:\Users\Curtis\Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\GenerateResource.write.1.tlog
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmAboutBox.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmAppSettings.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmPIDSettings.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmProfileSettings.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.frmMainWindow.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.Properties.Resources.resources
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\GenerateResource.read.1.tlog
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\GenerateResource.write.1.tlog
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.exe.config
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.exe
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\DS1307Lib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\FileLib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\SerialLib.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\ZedGraph.dll
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\DS1307Lib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\FileLib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\bin\Debug\SerialLib.pdb
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.exe
+C:\Users\Curtis\Documents\My Dropbox\Projects\Hobbybotics\Reflow\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.pdb
+C:\Users\Curtis\Google Drive\Projects\Hobbybotics Reflow Controller\V8.03\Applications\ReflowController\ReflowController\bin\Debug\ReflowController.exe.config
+C:\Users\Curtis\Google Drive\Projects\Hobbybotics Reflow Controller\V8.03\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.exe
+C:\Users\Curtis\Google Drive\Projects\Hobbybotics Reflow Controller\V8.03\Applications\ReflowController\ReflowController\obj\x86\Debug\ReflowController.pdb

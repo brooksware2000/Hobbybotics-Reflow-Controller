@@ -1,0 +1,5 @@
+c:\users\curtis\documents\visual studio 2010\Projects\DS1307Lib\DS1307Lib\bin\Debug\DS1307Lib.dll
+c:\users\curtis\documents\visual studio 2010\Projects\DS1307Lib\DS1307Lib\bin\Debug\DS1307Lib.pdb
+c:\users\curtis\documents\visual studio 2010\Projects\DS1307Lib\DS1307Lib\obj\Debug\ResolveAssemblyReference.cache
+c:\users\curtis\documents\visual studio 2010\Projects\DS1307Lib\DS1307Lib\obj\Debug\DS1307Lib.dll
+c:\users\curtis\documents\visual studio 2010\Projects\DS1307Lib\DS1307Lib\obj\Debug\DS1307Lib.pdb

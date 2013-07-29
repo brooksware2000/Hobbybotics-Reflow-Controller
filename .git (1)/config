@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+	hideDotFiles = dotGitOnly
+[remote "Hobbybotics-Reflow-Controller"]
+	url = https://github.com/brooksware2000/Hobbybotics-Reflow-Controller
+	fetch = +refs/heads/*:refs/remotes/Hobbybotics-Reflow-Controller/*
+[branch "master"]
+	remote = Hobbybotics-Reflow-Controller
+	merge = refs/heads/master

@@ -1,0 +1,5 @@
+Degrees Celcius: "\u2103"
+Degrees Fahrenheit: "\u2109"
+Degrees Kelvin: "\u212a"
+Degree Symbol: "\u00b0"
+Infinity Symbol: "\u221E"

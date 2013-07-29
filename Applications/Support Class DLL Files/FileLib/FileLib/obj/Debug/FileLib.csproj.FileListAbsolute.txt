@@ -1,0 +1,5 @@
+c:\users\curtis\documents\visual studio 2010\Projects\FileLib\FileLib\bin\Debug\FileLib.dll
+c:\users\curtis\documents\visual studio 2010\Projects\FileLib\FileLib\bin\Debug\FileLib.pdb
+c:\users\curtis\documents\visual studio 2010\Projects\FileLib\FileLib\obj\Debug\ResolveAssemblyReference.cache
+c:\users\curtis\documents\visual studio 2010\Projects\FileLib\FileLib\obj\Debug\FileLib.dll
+c:\users\curtis\documents\visual studio 2010\Projects\FileLib\FileLib\obj\Debug\FileLib.pdb
