@@ -7,3 +7,7 @@ More information about this project can be found at the following links:
 
 http://hobbybotics.com
 http://hobbybotics.com/projects/hobbybotics-reflow-controller-v8-03/
+
+28 July 2013 - Uploaded a revision to the firmware.  An error was identified in
+the Bake routine which prevented it from working properly.  This has been fixed
+in revision 5H.
