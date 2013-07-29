@@ -1,9 +1,10 @@
 1.  What to do if you get an, "Overwriting previous address contents." error or warning message while compiling the
     PicBasic Pro V2.60 project file:
 
-    This error/warning is returned by PBP whenever the configuration fuses in the default inlude file for your         chosen microcontroller are being overwritten.
+    This error/warning is returned by PBP whenever the configuration fuses in the default inlude file for your chosen microcontroller are being overwritten.
 
-    The simplist fix is to drop the following modified include file (16F877A.INC) into your C:\Program Files\PBP\     directory.  
+    The simplist fix is to drop the following modified include file (16F877A.INC) into your 
+    "C:\Program Files\PBP\" directory.  
 
 	This file comments out the following two lines for the PIC16F877A device:
 
@@ -11,6 +12,7 @@
 
 		;__config _XT_OSC & _WDT_ON & _LVP_OFF & _CP_OFF
 
-2.  Make sure ReEnterPBP.bas, Elapsed_INT.bas, DT_INTS-14.bas and PIC16F877A.pbp are in the same project folder as      the reflowXX.pbp (XX is the revision number) file.
+2.  Make sure ReEnterPBP.bas, Elapsed_INT.bas, DT_INTS-14.bas and PIC16F877A.pbp are in the same project folder 
+    as the reflowXX.pbp (XX is the revision number) file.
 
 3.  There is a hex file in the project folder for those that do not want to compile the project.
